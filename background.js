@@ -231,6 +231,7 @@ function getHtml(htmlSource) {
   foundRegex = htmlSource.match(doiRegex);
   if (foundRegex) {
     var doi = foundRegex[0].split(";")[0];
+    doi = doi.replace(/\.pdf/, "");
     var destUrl = sciHubUrl + doi;
     // console.log("Regex: " + foundRegex);
     if (autodownload) {
