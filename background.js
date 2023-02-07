@@ -14,7 +14,7 @@ var autoCheckServer = true;
 var venueAbbreviations = {};
 const defaults = {
   "autodownload": false,
-  "scihub-url": "https://sci-hub.se/",
+  "scihub-url": "https://sci-hub.st/",
   "autoname": false,
   "open-in-new-tab": false,
   "autocheck-server": true,
