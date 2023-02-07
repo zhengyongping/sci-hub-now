@@ -17,7 +17,7 @@ const defaults = {
   "scihub-url": "https://sci-hub.st/",
   "autoname": false,
   "open-in-new-tab": false,
-  "autocheck-server": true,
+  "autocheck-server": false,
   "venue-abbreviations": {}
 };
 // Variable management functions
