@@ -14,10 +14,10 @@ var autoCheckServer = true;
 var venueAbbreviations = {};
 const defaults = {
   "autodownload": false,
-  "scihub-url": "https://sci-hub.se/",
+  "scihub-url": "https://sci-hub.st/",
   "autoname": false,
   "open-in-new-tab": false,
-  "autocheck-server": true,
+  "autocheck-server": false,
   "venue-abbreviations": {}
 };
 // Variable management functions
@@ -76,13 +76,49 @@ chrome.runtime.onInstalled.addListener(function (details) {
   if (details.reason == "install") {
     browser.tabs.create({ url: 'chrome://extensions/?options=' + chrome.runtime.id }).then();
   }
-  if (details.reason == "update") { 
-    if (confirm("Thank you for upgrading Sci-Hub X Now!\n" +
+  if (details.reason == "update") {
+    function parseVersion(version) {
+      const parts = version.split(".");
+      const major = parseInt(parts[0], 10);
+      const minor = parseInt(parts[1], 10);
+      const bugfix = parseInt(parts[2], 10);
+
+      return { major, minor, bugfix };
+    }
+    let previousVersion = parseVersion(details.previousVersion);
+    let current_version = parseVersion(chrome.runtime.getManifest().version);
+
+    let major_update = current_version.major > previousVersion.major;
+    let minor_update =
+      current_version.major == previousVersion.major &&
+      current_version.minor > previousVersion.minor;
+    let bugfix_update =
+      current_version.major == previousVersion.major &&
+      current_version.minor == previousVersion.minor &&
+      current_version.bugfix > previousVersion.bugfix;
+    let no_update = current_version == previousVersion;
+
+    let update_message =
+      "Thank you for upgrading Sci-Hub X Now!\n" +
       "We have new features!\n" +
-      "Would you like to go to the \"options\" page now to enable them?"
-    )) {
-      browser.tabs.create({ url: 'chrome://extensions/?options=' + chrome.runtime.id }).then();
-    };
+      'Would you like to go to the "options" page now to enable them?';
+    if (major_update) {
+      console.log("A major version update has occurred.");
+      if (confirm(update_message)) {
+        browser.runtime.openOptionsPage();
+      }
+    } else if (minor_update) {
+      console.log("A minor version update has occurred.");
+      if (confirm(update_message)) {
+        browser.runtime.openOptionsPage();
+      }
+    } else if (bugfix_update) {
+      console.log("A bugfix version update has occurred.");
+    } else if (no_update) {
+      console.log("No update has occurred.");
+    } else {
+      console.log("A downdate has occurred.");
+    }
   }
 });
 chrome.storage.local.get(defaults, function (result) {

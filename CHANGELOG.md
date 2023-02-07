@@ -2,11 +2,22 @@
 
 ## TODO
 
+- [ ] Upgrade to manifest v3
 - [ ] Custom auto-naming formats
 - [ ] Better journal/venue abbreviations
 - [ ] Better `shorttitles` in metadata
 - [ ] Custom email address to use with doi.crossref.org
 - [ ] Test unreleased changes on firefox & edge, and also check permissions differences amongst different browsers
+
+## v0.2.2
+
+### Cosmetic changes
+* Changes default server to sci-hub.st (since sci-hub.se is down)
+* Changes the location to fetch the list of active servers from the release branch to the master branch
+* Changes the default to *not* check whether sci-hub is down on each paper request.
+
+### Bugfixes
+* [#60](https://github.com/gchenfc/sci-hub-now/pull/60) Remove extra ".pdf" suffix to DOI extractor
 
 ## v0.2.1
 
