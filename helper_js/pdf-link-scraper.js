@@ -20,3 +20,5 @@ function getPdfDownloadLink(htmlSource) {
 }
 
 // getPdfDownloadLink(document.body.innerHTML);
+
+export { getPdfDownloadLink };

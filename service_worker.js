@@ -1,3 +1,11 @@
+import { getPdfDownloadLink } from "./helper_js/pdf-link-scraper.js"
+import { extractMetadata } from "./helper_js/doi-metadata-scraper.js"
+
+// webextension-polyfill.js (firefox)
+if (!('browser' in self)) {
+  self.browser = self.chrome;
+}
+
 // Old and less strict DOI regex.
 // const doiRegex = "10.\\d{4,9}/[-._;()/:a-z0-9A-Z]+";
 const doiRegex = new RegExp(
@@ -189,7 +197,7 @@ function checkServerStatus(domain) {
       }
       sent_message = true;
     });
-  
+
   setTimeout(function () {
     if (sent_message) { return; }
     if (counts[0] < FILES_TO_CHECK.length) {
@@ -264,7 +272,7 @@ function redirectToScihub(destUrl) {
 // Primary callback upon icon click
 function getHtml(htmlSource) {
   htmlSource = htmlSource[0];
-  foundRegex = htmlSource.match(doiRegex);
+  let foundRegex = htmlSource.result.match(doiRegex);
   if (foundRegex) {
     var doi = foundRegex[0].split(";")[0];
     doi = doi.replace(/\.pdf/, "");
@@ -311,20 +319,22 @@ function getHtml(htmlSource) {
       setTimeout(checkServerStatus, 1, sciHubUrl);
     }
   } else {
-    // browser.browserAction.setBadgeTextColor({ color: "white" });
-    browser.browserAction.setBadgeBackgroundColor({ color: trueRed });
-    browser.browserAction.setBadgeText({ text: ":'(" });
+    // browser.action.setBadgeTextColor({ color: "white" });
+    browser.action.setBadgeBackgroundColor({ color: trueRed });
+    browser.action.setBadgeText({ text: ":'(" });
   }
 }
 
 // Icon click
 function executeJs() {
-  const executing = browser.tabs.executeScript({
-    code: "document.body.innerHTML",
+  chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+    return browser.scripting.executeScript({
+      target: { tabId: tabs[0].id },
+      func: () => { return document.body.innerHTML; },
+    }).then(getHtml);
   });
-  executing.then(getHtml);
 }
-browser.browserAction.onClicked.addListener(executeJs);
+browser.action.onClicked.addListener(executeJs);
 
 // Context menus (right click)
 browser.contextMenus.create({
@@ -347,7 +357,7 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
 
 // Badge stuff
 function resetBadgeText() {
-  browser.browserAction.setBadgeText({ text: "" });
+  browser.action.setBadgeText({ text: "" });
 }
 browser.tabs.onUpdated.addListener(resetBadgeText);
-browser.tabs.onSelectionChanged.addListener(resetBadgeText);
+browser.tabs.onActivated.addListener(resetBadgeText);

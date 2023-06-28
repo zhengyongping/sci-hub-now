@@ -49,3 +49,5 @@ function extractMetadata(metadata_str) {
 };
 
 // extractMetadata(document.body.innerText);
+
+export { extractMetadata };
