@@ -10,8 +10,8 @@ if (!('browser' in self)) {
 //  await doAlert("message");
 // `tab` must be passed in from a callback.
 async function doAlert(message) {
+  console.log("Trying to trigger alert with message: ", message);
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  console.log(tabs);
   const activeTab = tabs[0];
   return chrome.scripting.executeScript({
     target: { tabId: activeTab.id },
@@ -20,7 +20,6 @@ async function doAlert(message) {
   });
 };
 function alertAndRedirect(msg, destUrl) {
-  console.log("Alert and Redicet was called");
   doAlert(msg).then(() => redirectToScihub(destUrl));
 }
 
@@ -306,27 +305,28 @@ function getHtml(htmlSource) {
         console.log(metadata);
       }
       var pdfLink = '';
-      try {
-        var xmlHttp = new XMLHttpRequest();
-        xmlHttp.timeout = 2000;
-        xmlHttp.open("GET", destUrl, true); // false for synchronous request
-        xmlHttp.onerror = function () {
+      // TODO(gerry): add a timeout, e.g. via 
+      // https://stackoverflow.com/questions/46946380/fetch-api-request-timeout/57888548#57888548
+      // https://stackoverflow.com/questions/31061838/how-do-i-cancel-an-http-fetch-request/47250621#47250621
+      fetch(destUrl).then(
+        function (response) {
+          console.log("Response is: ", response);
+          response.text().then(function (text) {
+            console.log("Response text is: ", text);
+            pdfLink = getPdfDownloadLink(destUrl, text);
+            if (!pdfLink) {
+              alertAndRedirect("Error 23: Download link parser failed - redirecting to sci-hub...", scihublink);
+            }
+            console.log("Downloading file from link: ", pdfLink);
+            downloadPaper(pdfLink, createFilenameFromMetadata(metadata), destUrl);
+          });
+        }
+      ).catch(
+        function (err) {
+          console.log("failed???", destUrl, err);
           alertAndRedirect("Error 25: Failed to obtain download link - redirecting to sci-hub...", destUrl);
-        };
-        xmlHttp.ontimeout = xmlHttp.onerror;
-        xmlHttp.onload = function () {
-          pdfLink = getPdfDownloadLink(xmlHttp.responseText);
-          if (!pdfLink) {
-            alertAndRedirect("Error 23: Download link parser failed - redirecting to sci-hub...", scihublink);
-          }
-          console.log(pdfLink);
-          downloadPaper(pdfLink, createFilenameFromMetadata(metadata), destUrl);
-        };
-        xmlHttp.send(null);
-      } catch (e) {
-        alertAndRedirect("Error 24: Failed to obtain download link - redirecting to sci-hub...", destUrl);
-        return;
-      }
+        }
+      );
     } else {
       redirectToScihub(destUrl);
     }

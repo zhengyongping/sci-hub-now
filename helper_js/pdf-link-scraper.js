@@ -4,15 +4,21 @@ const pdfRegexes = [
   new RegExp(/iframe\s*src\s*=\s*"([^"]*?\.pdf)/)
 ];
 
-function getPdfDownloadLink(htmlSource) {
+function getPdfDownloadLink(urlRoot, htmlSource) {
   for (let pdfRegex of pdfRegexes) {
     console.log("regex is: ", pdfRegex);
-    foundRegex = htmlSource.match(pdfRegex);
+    const foundRegex = htmlSource.match(pdfRegex);
     console.log("foundRegex is: ", foundRegex);
     if (foundRegex) {
-      toReturn = foundRegex[1];
+      let toReturn = foundRegex[1];
+      console.log("toReturn is: ", toReturn);
       if (toReturn.startsWith("//")) { // quirk of sci-hub.st
+        console.log("toReturn starts with //");
         toReturn = "https:" + toReturn;
+      }
+      if (toReturn.startsWith("/")) { // download link is relative to site root
+        toReturn = urlRoot + toReturn;
+        console.log("toReturn starts with /.  New link is ", toReturn);
       }
       return toReturn;
     }
