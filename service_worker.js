@@ -6,6 +6,24 @@ if (!('browser' in self)) {
   self.browser = self.chrome;
 }
 
+// Util function to do an alert using Manifest v3.  Usage:
+//  await doAlert("message");
+// `tab` must be passed in from a callback.
+async function doAlert(message) {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  console.log(tabs);
+  const activeTab = tabs[0];
+  return chrome.scripting.executeScript({
+    target: { tabId: activeTab.id },
+    func: (message) => { alert(message); },
+    args: [message],
+  });
+};
+function alertAndRedirect(msg, destUrl) {
+  console.log("Alert and Redicet was called");
+  doAlert(msg).then(() => redirectToScihub(destUrl));
+}
+
 // Old and less strict DOI regex.
 // const doiRegex = "10.\\d{4,9}/[-._;()/:a-z0-9A-Z]+";
 const doiRegex = new RegExp(
@@ -139,28 +157,30 @@ var tmpPermissions;
 chrome.permissions.onRemoved.addListener(function (permissions) {
   console.log("permissions revoked!!!", permissions)
   tmpPermissions = permissions;
+  // TODO: doAlert won't work because it's inside a chrome:// tab which is permissions protected.
+  // One workaround is to save the reason auto-download was disabled and then display it when the user next opens the options page.
+  const alertAndDisableDownload = (msg) => {
+    doAlert(msg).then(() => { chrome.storage.local.set({ "autodownload": false }); });
+  };
   for (var origin of permissions.origins) {
     origin = origin.replaceAll("*", ".*"); // to match regex syntax
     console.log(origin, getApiQueryUrl("", ""));
     if (getApiQueryUrl("", "").match(origin)) {
-      alert("You've removed the permission for \"Sci-Hub X Now!\" to access the doi metadata query service by https://doi.crossref.org." +
+      alertAndDisableDownload("You've removed the permission for \"Sci-Hub X Now!\" to access the doi metadata query service by https://doi.crossref.org." +
         "\nThe auto-naming feature will now be disabled but other functionality" + (autodownload ? " (including auto-downloading) " : " ") + "will continue to work." +
         "\nYou may re-enable auto-naming at any time by going to the options page (right click the extension icon and click \"Options\") then selecting the \"Auto-name downloaded pdf's\" checkbox.");
-      chrome.storage.local.set({ "autoname": false });
     }
     if (sciHubUrl.match(origin)) {
-      alert("You've removed the permission for \"Sci-Hub X Now!\" to access the sci hub url: `" + sciHubUrl + "`." +
+      alertAndDisableDownload("You've removed the permission for \"Sci-Hub X Now!\" to access the sci hub url: `" + sciHubUrl + "`." +
         "\nThe auto-download feature will now be disabled but redirecting doi's to sci-hub will continue to work." +
         "\nYou may re-enable auto-downloading at any time by going to the options page (right click the extension icon and click \"Options\") then selecting the \"Auto-download pdf's\" checkbox.");
-      chrome.storage.local.set({ "autodownload": false });
     }
   }
   for (const permission of permissions.permissions) {
     if (permission === "downloads") {
-      alert("You've removed the permission for \"Sci-Hub X Now!\" to automatically download files." +
+      alertAndDisableDownload("You've removed the permission for \"Sci-Hub X Now!\" to automatically download files." +
         "\nThe auto-download feature will now be disabled but redirecting doi's to sci-hub will continue to work." +
         "\nYou may re-enable auto-downloading at any time by going to the options page (right click the extension icon and click \"Options\") then selecting the \"Auto-download pdf's\" checkbox.");
-      chrome.storage.local.set({ "autodownload": false });
     }
   }
 });
@@ -244,16 +264,14 @@ function downloadPaper(link, fname, scihublink) {
     filename: fname
   }, (downloadId) => {
     if (!downloadId) {
-      alert("Download failed - redirecting to sci-hub...");
-      redirectToScihub(scihublink);
+      alertAndRedirect("Download failed - redirecting to sci-hub...", scihublink);
     } else {
       setTimeout(() => {
         chrome.downloads.search({ id: downloadId }, (results) => {
           console.log(results, results[0].bytesReceived);
           console.log(results, results[0].bytesReceived);
           if (!results || !results[0].bytesReceived) {
-            alert("Download is very slow.\nSuspected failure downloading.\nRedirecting to sci-hub...");
-            redirectToScihub(scihublink);
+            alertAndRedirect("Download is very slow.\nSuspected failure downloading.\nRedirecting to sci-hub...", scihublink);
           }
         });
       }, 500);
@@ -293,23 +311,20 @@ function getHtml(htmlSource) {
         xmlHttp.timeout = 2000;
         xmlHttp.open("GET", destUrl, true); // false for synchronous request
         xmlHttp.onerror = function () {
-          alert("Error 25: Failed to obtain download link - redirecting to sci-hub...");
-          redirectToScihub(destUrl);
+          alertAndRedirect("Error 25: Failed to obtain download link - redirecting to sci-hub...", destUrl);
         };
         xmlHttp.ontimeout = xmlHttp.onerror;
         xmlHttp.onload = function () {
           pdfLink = getPdfDownloadLink(xmlHttp.responseText);
           if (!pdfLink) {
-            alert("Error 23: Download link parser failed - redirecting to sci-hub...");
-            redirectToScihub(scihublink);
+            alertAndRedirect("Error 23: Download link parser failed - redirecting to sci-hub...", scihublink);
           }
           console.log(pdfLink);
           downloadPaper(pdfLink, createFilenameFromMetadata(metadata), destUrl);
         };
         xmlHttp.send(null);
       } catch (e) {
-        alert("Error 24: Failed to obtain download link - redirecting to sci-hub...");
-        redirectToScihub(destUrl);
+        alertAndRedirect("Error 24: Failed to obtain download link - redirecting to sci-hub...", destUrl);
         return;
       }
     } else {
@@ -330,7 +345,7 @@ function executeJs() {
   chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
     return browser.scripting.executeScript({
       target: { tabId: tabs[0].id },
-      func: () => { return document.body.innerHTML; },
+      func: () => { return document.body.innerHTML },
     }).then(getHtml);
   });
 }
