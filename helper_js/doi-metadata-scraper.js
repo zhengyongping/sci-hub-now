@@ -1,5 +1,15 @@
 const metadataRegex = new RegExp(/.*?\|([^\|]+?)\|([^\|]+?)\|[^\|]*?\|[^\|]*?\|[^\|]*?\|([^\|]+?)\|[^\|]*?\|([^\|]*?)\|([^\|]*)/);
 
+function getApiQueryUrl(doi, email) {
+  return 'https://doi.crossref.org/servlet/query' + '?pid=' + email + '&id=' + doi;
+}
+
+function createFilenameFromMetadata(md) {
+  if (!md)
+    return undefined;
+  return md.authorlastname + md.yearmod100 + md.shortvenue + "_" + md.shorttitle + '.pdf';
+}
+
 function extractLastName(fullname) {
   let lastname = fullname.match(/.*\s(.*)/);
   if (lastname) {
@@ -8,6 +18,8 @@ function extractLastName(fullname) {
     return fullname;
   }
 };
+
+var venueAbbreviations; // TODO(gerry): fix the visibility of variables
 function abbreviateVenue(venue) {
   // First loop through our hard-coded list
   for (const property in venueAbbreviations) {
@@ -28,10 +40,11 @@ function abbreviateVenue(venue) {
   capitalLetters.forEach((v, i) => { capitalLetters[i] = v[0] }); // drop second letter of each chunk
   return capitalLetters.join('').toLowerCase();
 };
+
 function extractMetadata(metadata_str) {
   let matches = metadata_str.match(metadataRegex);
   if (!matches) {
-    doAlert("Error 27: Could not parse the metadata file!\n\n" + metadata_str + "\nSaving with default filename.");
+    doAlert("Error 27: Could not parse the metadata file!\n\n" + metadata_str + "\nSaving with default filename.").then(() => { return null });
     return null;
   }
   let metadata = {
@@ -48,6 +61,4 @@ function extractMetadata(metadata_str) {
   return metadata;
 };
 
-// extractMetadata(document.body.innerText);
-
-export { extractMetadata };
+export { getApiQueryUrl, createFilenameFromMetadata, extractMetadata };

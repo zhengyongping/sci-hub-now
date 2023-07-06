@@ -1,5 +1,6 @@
 import { getPdfDownloadLink } from "./helper_js/pdf-link-scraper.js"
-import { extractMetadata } from "./helper_js/doi-metadata-scraper.js"
+import { getApiQueryUrl, createFilenameFromMetadata, extractMetadata } from "./helper_js/doi-metadata-scraper.js"
+import { httpGetText } from "./helper_js/download_utils.js"
 
 // webextension-polyfill.js (firefox)
 if (!('browser' in self)) {
@@ -242,20 +243,6 @@ function checkServerStatusHelper(testurl, callback) {
 /************* END SERVER ALIVE CHECKING CODE ****************** */
 
 // Automatic file name lookup & pdf downloading
-function httpGet(theUrl) {
-  var xmlHttp = new XMLHttpRequest();
-  xmlHttp.open("GET", theUrl, false); // false for synchronous request
-  xmlHttp.send(null);
-  return xmlHttp.responseText;
-}
-function getApiQueryUrl(doi, email) {
-  return 'https://doi.crossref.org/servlet/query' + '?pid=' + email + '&id=' + doi;
-}
-function createFilenameFromMetadata(md) {
-  if (!md)
-    return undefined;
-  return md.authorlastname + md.yearmod100 + md.shortvenue + "_" + md.shorttitle + '.pdf';
-}
 function downloadPaper(link, fname, scihublink) {
   console.log("Downloading " + link + " as " + fname);
   chrome.downloads.download({
@@ -286,6 +273,23 @@ function redirectToScihub(destUrl) {
   }
 }
 
+function downloadPaperWithMetadata(url, metadata = undefined) {
+  var pdfLink = '';
+  httpGetText(url)
+    .then(htmlSource => {
+      pdfLink = getPdfDownloadLink(url, htmlSource);
+      if (!pdfLink) {
+        alertAndRedirect("Error 23: Download link parser failed - redirecting to sci-hub...", url);
+        return;
+      }
+      console.log("Downloading file from link: ", pdfLink);
+      downloadPaper(pdfLink, createFilenameFromMetadata(metadata), url);
+    })
+    .catch(err => {
+      console.log("failed???", url, err);
+      alertAndRedirect("Error 25: Failed to obtain download link - redirecting to sci-hub...", url);
+    });
+}
 // Primary callback upon icon click
 function getHtml(htmlSource) {
   htmlSource = htmlSource[0];
@@ -296,37 +300,22 @@ function getHtml(htmlSource) {
     var destUrl = sciHubUrl + doi;
     // console.log("Regex: " + foundRegex);
     if (autodownload) {
-      var metadata = undefined;
       if (autoname) {
         const email = 'gchenfc.developer@gmail.com';
-        var contents = httpGet(getApiQueryUrl(doi, email));
-        console.log(contents);
-        metadata = extractMetadata(contents);
-        console.log(metadata);
-      }
-      var pdfLink = '';
-      // TODO(gerry): add a timeout, e.g. via 
-      // https://stackoverflow.com/questions/46946380/fetch-api-request-timeout/57888548#57888548
-      // https://stackoverflow.com/questions/31061838/how-do-i-cancel-an-http-fetch-request/47250621#47250621
-      fetch(destUrl).then(
-        function (response) {
-          console.log("Response is: ", response);
-          response.text().then(function (text) {
-            console.log("Response text is: ", text);
-            pdfLink = getPdfDownloadLink(destUrl, text);
-            if (!pdfLink) {
-              alertAndRedirect("Error 23: Download link parser failed - redirecting to sci-hub...", scihublink);
-            }
-            console.log("Downloading file from link: ", pdfLink);
-            downloadPaper(pdfLink, createFilenameFromMetadata(metadata), destUrl);
+        httpGetText(getApiQueryUrl(doi, email))
+          .then(contents => {
+            console.log("metadata html contents:", contents);
+            const metadata = extractMetadata(contents);
+            console.log("metadata extracted:", metadata);
+            return downloadPaperWithMetadata(destUrl, metadata);
+          })
+          .catch(err => {
+            console.log("Error 24: Failed to obtain metadata (err: ", err, ") - redirecting to sci-hub...", destUrl)
+            alertAndRedirect("Error 24: Failed to obtain metadata (err: ", err, ") - redirecting to sci-hub...", destUrl)
           });
-        }
-      ).catch(
-        function (err) {
-          console.log("failed???", destUrl, err);
-          alertAndRedirect("Error 25: Failed to obtain download link - redirecting to sci-hub...", destUrl);
-        }
-      );
+      } else {
+        return downloadPaperWithMetadata(destUrl, undefined);
+      }
     } else {
       redirectToScihub(destUrl);
     }
