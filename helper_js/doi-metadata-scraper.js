@@ -2,7 +2,8 @@ import { venueAbbreviations } from "./config.js";
 
 const metadataRegex = new RegExp(/.*?\|([^\|]+?)\|([^\|]+?)\|[^\|]*?\|[^\|]*?\|[^\|]*?\|([^\|]+?)\|[^\|]*?\|([^\|]*?)\|([^\|]*)/);
 
-function getApiQueryUrl(doi, email) {
+const EMAIL = 'gchenfc.developer@gmail.com';
+function getApiQueryUrl(doi, email = EMAIL) {
   return 'https://doi.crossref.org/servlet/query' + '?pid=' + email + '&id=' + doi;
 }
 
@@ -43,6 +44,7 @@ function abbreviateVenue(venue) {
 };
 
 function extractMetadata(metadata_str) {
+  console.log("metadata html contents:", metadata_str);
   let matches = metadata_str.match(metadataRegex);
   if (!matches) {
     doAlert("Error 27: Could not parse the metadata file!\n\n" + metadata_str + "\nSaving with default filename.").then(() => { return null });
@@ -59,6 +61,7 @@ function extractMetadata(metadata_str) {
   metadata.shortvenue = abbreviateVenue(metadata.venue);
   metadata.yearmod100 = metadata.year.slice(-2);
 
+  console.log("metadata extracted:", metadata);
   return metadata;
 };
 

@@ -32,12 +32,16 @@ function downloadPaper(link, fname, scihublink) {
     }
   });
 }
-function redirectToScihub(destUrl) {
+async function redirectToScihub(destUrl) {
   if (openInNewTab) {
-    var creatingTab = browser.tabs.create({ url: destUrl });
-    creatingTab.then();
+    const resp = await browser.tabs.create({ url: destUrl });
+    console.log("Created tab:", resp);
   } else {
-    browser.tabs.update(undefined, { url: destUrl });
+    const resp = await browser.tabs.update(undefined, { url: destUrl })
+    console.log("Updated tab:", resp);
+  }
+  if (autoCheckServer) {
+    checkServerStatus(destUrl);
   }
 }
 function alertAndRedirect(msg, destUrl) {
@@ -66,12 +70,9 @@ function main(doi) {
   const destUrl = sciHubUrl + doi;
   if (autodownload) {
     if (autoname) {
-      const email = 'gchenfc.developer@gmail.com';
-      httpGetText(getApiQueryUrl(doi, email))
+      httpGetText(getApiQueryUrl(doi))
         .then(contents => {
-          console.log("metadata html contents:", contents);
           const metadata = extractMetadata(contents);
-          console.log("metadata extracted:", metadata);
           return downloadPaperWithMetadata(destUrl, metadata);
         })
         .catch(err => {
@@ -84,13 +85,10 @@ function main(doi) {
   } else {
     redirectToScihub(destUrl);
   }
-  if (autoCheckServer) {
-    setTimeout(checkServerStatus, 1, sciHubUrl);
-  }
 }
 
 // Primary callback upon icon click
-function getHtml(htmlSource) {
+function findDoiFromHtml(htmlSource) {
   htmlSource = htmlSource[0];
   let foundRegex = htmlSource.result.match(doiRegex);
   if (foundRegex) {
@@ -111,7 +109,7 @@ function executeJs() {
     return browser.scripting.executeScript({
       target: { tabId: tabs[0].id },
       func: () => { return document.body.innerHTML },
-    }).then(getHtml);
+    }).then(findDoiFromHtml);
   });
 }
 browser.action.onClicked.addListener(executeJs);
@@ -130,9 +128,6 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
   if (!doi) {
     doi = info.selectionText;
   }
-  // var creatingTab = browser.tabs.create({
-  //   url: sciHubUrl + doi,
-  // });
   main(doi);
 });
 

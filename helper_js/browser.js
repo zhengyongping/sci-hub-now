@@ -14,7 +14,7 @@ async function doAlert(message) {
   const activeTab = tabs[0];
   return chrome.scripting.executeScript({
     target: { tabId: activeTab.id },
-    func: (message) => { alert(message); },
+    func: (message) => { alert("From Sci-Hub X Now! extension: " + message); },
     args: [message],
   }).catch(reason => {
     console.log("Failed to trigger alert, trying to open popup: ", reason);
@@ -23,5 +23,21 @@ async function doAlert(message) {
     browser.tabs.update({ url: 'chrome://extensions/?options=' + chrome.runtime.id });
   });
 };
+async function doConfirm(message) {
+  console.log("Trying to trigger alert with message: ", message);
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const activeTab = tabs[0];
+  return chrome.scripting.executeScript({
+    target: { tabId: activeTab.id },
+    func: (message) => confirm("From Sci-Hub X Now! extension: " + message),
+    args: [message],
+  }).then(resp => resp[0].result).catch(reason => {
+    console.log("Failed to trigger alert, trying to open popup: ", reason);
+    browser.storage.local.set({ 'error-message': message });
+    // open options page
+    browser.tabs.update({ url: 'chrome://extensions/?options=' + chrome.runtime.id });
+    return false;
+  });
+}
 
-export { doAlert }
+export { doAlert, doConfirm }

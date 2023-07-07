@@ -1,6 +1,26 @@
+import { doConfirm } from "./browser.js"
+
+function checkServerStatus(url, timeout = 1000) {
+  const controller = new AbortController();
+  setTimeout(() => { controller.abort() }, timeout);
+  fetch(url, { signal: controller.signal })
+    .then(() => {
+      console.log("CHECK VALID SUCCESS");
+    })
+    .catch((err) => {
+      console.log("CHECK VALID FAILED", err);
+      doConfirm("We detected that the mirror " + url + " might be dead." +
+        "\nIf the page/pdf actually loaded correctly, then there's no need for action and you may consider going to the options page to disable \"Auto-check sci-hub mirror on each paper request\"." +
+        "\nWould you like to go to the options page to select a different mirror or to turn off auto-checking?").then((yesno) => {
+          if (yesno) {
+            browser.tabs.create({ url: 'chrome://extensions/?options=' + chrome.runtime.id });
+          }
+        });
+    });
+}
 /************* BEGIN SERVER ALIVE CHECKING CODE ****************** */
 let FILES_TO_CHECK = ["favicon.ico", "misc/img/raven_1.png", "pictures/ravenround_hs.gif"]
-function checkServerStatus(domain) {
+function checkServerStatusOld(domain) {
   var counts = [0, 0];
   var sent_message = false;
 
@@ -43,6 +63,8 @@ function checkServerStatus(domain) {
 }
 function checkServerStatusHelper(testurl, callback) {
   // TDOO(gerry): use virtual DOM defined in chrome extension mv3 docs
+  // edit: actually this requires additional chrome permissions, so I think it's best to just
+  //  request host/CORS permissions for sci-hub.se instead.
   var img = document.body.appendChild(document.createElement("img"));
   img.height = 0;
   img.visibility = "hidden";

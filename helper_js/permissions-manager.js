@@ -84,7 +84,7 @@ function addListeners() {
       }
       if (sciHubUrl.match(origin)) {
         alertAndDisableDownload("You've removed the permission for \"Sci-Hub X Now!\" to access the sci hub url: `" + sciHubUrl + "`." +
-          "\nThe auto-download feature will now be disabled but redirecting doi's to sci-hub will continue to work." +
+          "\nThe \"auto-download\" and \"auto-check server alive\" features will now be disabled but redirecting doi's to sci-hub will continue to work." +
           "\nYou may re-enable auto-downloading at any time by going to the options page (right click the extension icon and click \"Options\") then selecting the \"Auto-download pdf's\" checkbox.");
       }
     }
