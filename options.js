@@ -1,5 +1,7 @@
 'use strict';
 
+import { requestCorsPermissionMetadata, requestCorsPermissionScihub } from './helper_js/permissions-manager.js';
+
 // Field access
 const propnameFieldnameMap = {
   "autodownload": "autodownload",
@@ -40,8 +42,8 @@ function initializeString(propname, isUrl, alternateCallback) {
       field.style.backgroundColor = "#aaa";
       master_link_count = [0, 0];
       setTimeout(checkServerStatus, 250, field.value, function (success) {
-          update_master_link_count(field.style, success);
-        });
+        update_master_link_count(field.style, success);
+      });
     }
   };
   field.onkeyup(); // colorize the initial text box
@@ -52,9 +54,12 @@ function initializeBool(propname, alternateCallback) {
   field.checked = propnameValueCache[propname];
   field.onchange = function () {
     console.log(propname + " callback!");
-    alternateCallback(field.checked).then(
-      () => { updateStorage(field.checked, propname); },
-      (reason) => { chrome.extension.getBackgroundPage().alert(reason); });
+    alternateCallback(field.checked)
+      .then(() => { updateStorage(field.checked, propname); })
+      .catch(
+        // (reason) => { chrome.extension.getBackgroundPage().alert(reason); });
+        (reason) => { alert(reason); console.log("Rejected due to ", reason); }
+      );
   };
 }
 
@@ -103,7 +108,6 @@ function scihuburlCallback(url) {
   console.log("url callback");
   return autodownloadCallback(propnameValueCache["autodownload"]);
 }
-function noop() { }
 
 // Variable storage
 function updateStorage(val, propname) {

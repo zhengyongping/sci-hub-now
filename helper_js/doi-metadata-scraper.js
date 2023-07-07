@@ -1,3 +1,5 @@
+import { venueAbbreviations } from "./config.js";
+
 const metadataRegex = new RegExp(/.*?\|([^\|]+?)\|([^\|]+?)\|[^\|]*?\|[^\|]*?\|[^\|]*?\|([^\|]+?)\|[^\|]*?\|([^\|]*?)\|([^\|]*)/);
 
 function getApiQueryUrl(doi, email) {
@@ -19,7 +21,6 @@ function extractLastName(fullname) {
   }
 };
 
-var venueAbbreviations; // TODO(gerry): fix the visibility of variables
 function abbreviateVenue(venue) {
   // First loop through our hard-coded list
   for (const property in venueAbbreviations) {
