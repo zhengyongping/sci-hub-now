@@ -1,5 +1,5 @@
 import { doiRegex, sciHubUrl, autodownload, autoname, openInNewTab, autoCheckServer, addListeners as addConfigListeners } from "./helper_js/config.js"
-import { doAlert } from "./helper_js/browser.js"
+import { doAlert, addListeners as addBrowserListeners } from "./helper_js/browser.js"
 import { getPdfDownloadLink } from "./helper_js/pdf-link-scraper.js"
 import { getApiQueryUrl, createFilenameFromMetadata, extractMetadata } from "./helper_js/doi-metadata-scraper.js"
 import { httpGetText } from "./helper_js/download_utils.js"
@@ -9,6 +9,7 @@ import { checkServerStatus } from "./helper_js/check-server-alive.js"
 // All imported event listeners
 addConfigListeners();
 addPermissionsListeners();
+addBrowserListeners();
 
 // Automatic file name lookup & pdf downloading
 function downloadPaper(link, fname, scihublink) {
