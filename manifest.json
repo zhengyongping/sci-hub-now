@@ -1,5 +1,5 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Sci-Hub X Now!",
   "short_name": "sci-hub-x-now",
   "version": "0.2.2",
@@ -10,7 +10,7 @@
     "48": "icons/48x48.png",
     "96": "icons/96x96.png"
   },
-  "browser_action": {
+  "action": {
     "browser_style": true,
     "default_icon": {
       "48": "icons/48x48.png",
@@ -31,7 +31,7 @@
     ]
   },
   "commands": {
-    "_execute_browser_action": {
+    "_execute_action": {
       "suggested_key": {
         "windows": "Alt+A",
         "mac": "Alt+A",
@@ -43,20 +43,19 @@
   "permissions": [
     "activeTab",
     "contextMenus",
+    "scripting",
     "storage"
   ],
   "optional_permissions": [
-    "downloads",
+    "downloads"
+  ],
+  "optional_host_permissions": [
     "https://doi.crossref.org/servlet/query*",
     "*://*/*"
   ],
   "background": {
-    "scripts": [
-      "browser-polyfill.js",
-      "background.js",
-      "helper_js/doi-metadata-scraper.js",
-      "helper_js/pdf-link-scraper.js"
-    ]
+    "service_worker": "service_worker.js",
+    "type": "module"
   },
   "options_page": "options.html",
   "options_ui": {

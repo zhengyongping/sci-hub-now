@@ -1,5 +1,7 @@
 'use strict';
 
+import { requestCorsPermissionMetadata, requestCorsPermissionScihub } from './helper_js/permissions-manager.js';
+
 // Field access
 const propnameFieldnameMap = {
   "autodownload": "autodownload",
@@ -18,11 +20,11 @@ function initFields() {
   initializeBool("autodownload", autodownloadCallback);
   initializeBool("autoname", autonameCallback);
   initializeBool("open-in-new-tab");
-  initializeBool("autocheck-server");
+  initializeBool("autocheck-server", autocheckServerCallback);
   initializeString("scihub-url", true, scihuburlCallback);
-  // autodownloadCallback(propnameValueCache["autodownload"]);
   autodownloadCallback(propnameValueCache["autodownload"]);
   autonameCallback(propnameValueCache["autoname"]);
+  autocheckServerCallback(propnameValueCache["autocheck-server"]);
 };
 function initializeString(propname, isUrl, alternateCallback) {
   if (!alternateCallback) alternateCallback = () => { return Promise.resolve(null) };
@@ -40,8 +42,8 @@ function initializeString(propname, isUrl, alternateCallback) {
       field.style.backgroundColor = "#aaa";
       master_link_count = [0, 0];
       setTimeout(checkServerStatus, 250, field.value, function (success) {
-          update_master_link_count(field.style, success);
-        });
+        update_master_link_count(field.style, success);
+      });
     }
   };
   field.onkeyup(); // colorize the initial text box
@@ -52,11 +54,28 @@ function initializeBool(propname, alternateCallback) {
   field.checked = propnameValueCache[propname];
   field.onchange = function () {
     console.log(propname + " callback!");
-    alternateCallback(field.checked).then(
-      () => { updateStorage(field.checked, propname); },
-      (reason) => { chrome.extension.getBackgroundPage().alert(reason); });
+    alternateCallback(field.checked)
+      .then(() => { updateStorage(field.checked, propname); })
+      .catch(
+        // (reason) => { chrome.extension.getBackgroundPage().alert(reason); });
+        (reason) => { alert(reason); console.log("Rejected due to ", reason); }
+      );
   };
 }
+
+// Alert modal
+async function doAlert() {
+  const data = await browser.storage.local.get('error-message')
+  if (!data['error-message']) return;
+  browser.storage.local.remove('error-message'); // clear the error message so it doesn't show up again
+  console.log('error message is: ', data['error-message']);
+  document.querySelector('#error-message').textContent = data['error-message'];
+  document.querySelector(".modal").style.display = 'block';
+}
+doAlert();
+document.getElementById("close-modal").addEventListener("click", function () {
+  document.querySelector(".modal").style.display = 'none';
+});
 
 // Callbacks
 function autodownloadCallback(checked) {
@@ -65,17 +84,21 @@ function autodownloadCallback(checked) {
   getField("open-in-new-tab").disabled = checked;
   if (checked) {
     return new Promise((resolve, reject) => {
-      requestCorsPermissionScihub(propnameValueCache["scihub-url"]).then(
-        (reason) => { console.log("completed scihub callback"); resolve(reason) },
-        (reason) => {
-          console.log("Scihub permission request failed");
-          updateStorage(false, "autodownload");
-          getField("autodownload").checked = false;
-          getField("autoname").disabled = true;
-          getField("open-in-new-tab").disabled = checked;
-          reject(reason);
-        }
-      );
+      requestCorsPermissionScihub(propnameValueCache["scihub-url"])
+        .then(
+          (reason) => {
+            getField("open-in-new-tab").checked = false;
+            console.log("completed scihub callback"); resolve(reason)
+          })
+        .catch(
+          (reason) => {
+            console.log("Scihub permission request failed");
+            updateStorage(false, "autodownload");
+            getField("autodownload").checked = false;
+            getField("autoname").disabled = true;
+            getField("open-in-new-tab").disabled = false;
+            reject(reason);
+          });
     });
   } else {
     return Promise.resolve("no additional permissions required");
@@ -85,32 +108,51 @@ function autonameCallback(checked) {
   console.log("autoname callback: " + checked);
   if (checked) {
     return new Promise((resolve, reject) => {
-      requestCorsPermissionMetadata().then(
-        (reason) => { console.log("completed metadata callback"); resolve(reason) },
-        (reason) => {
-          console.log("Metadata permission request failed");
-          updateStorage(false, "autoname");
-          getField("autoname").checked = false;
-          reject(reason);
-        }
-      );
+      requestCorsPermissionMetadata()
+        .then(
+          (reason) => { console.log("completed metadata callback"); resolve(reason) })
+        .catch(
+          (reason) => {
+            console.log("Metadata permission request failed");
+            updateStorage(false, "autoname");
+            getField("autoname").checked = false;
+            reject(reason);
+          });
     });
   } else {
     return Promise.resolve("no additional permissions required");
   }
 }
+function autocheckServerCallback(checked) {
+  console.log("autocheckServer callback: " + checked);
+  if (checked) {
+    return new Promise((resolve, reject) => {
+      requestCorsPermissionScihub(propnameValueCache["scihub-url"])
+        .then(
+          (reason) => { console.log("completed scihub callback"); resolve(reason) })
+        .catch(
+          (reason) => {
+            console.log("Scihub permission request failed");
+            updateStorage(false, "autocheck-server");
+            getField("autocheck-server").checked = false;
+            reject(reason);
+          });
+    });
+  } else {
+    return Promise.resolve("no additional permissions required");
+  }
+};
 function scihuburlCallback(url) {
   console.log("url callback");
   return autodownloadCallback(propnameValueCache["autodownload"]);
 }
-function noop() { }
 
 // Variable storage
 function updateStorage(val, propname) {
   propnameValueCache[propname] = val;
   var obj = {};
   obj[propname] = val;
-  chrome.storage.local.set(obj, function () { });
+  chrome.storage.local.set(obj);
   console.log("updated storage for " + propname + ": " + val);
 };
 
@@ -169,7 +211,7 @@ function checkServerStatus(domain, callback) {
 function checkServerStatusHelper(testurl, callback) {
   var img = document.body.appendChild(document.createElement("img"));
   img.height = 0;
-  img.visibility = "hidden";
+  img.style.display = "none";
   img.onload = function () {
     callback && callback.constructor == Function && callback(true);
   };
@@ -208,6 +250,17 @@ function update_counts(i, success) {
   console.log("colored: ", linkstable.rows[i + 1]);
 }
 
+// Currently unused method of checking the server alive state.  Requires host / CORS permissions.
+function checkServer(url, timeout) {
+  const controller = new AbortController();
+  const signal = controller.signal;
+  const options = { mode: 'no-cors', signal };
+  return fetch(url, options)
+    .then(setTimeout(() => { controller.abort() }, timeout))
+    .then(response => console.log('Check server response:', response.statusText, response.ok, response.text(), response.body, response))
+    .catch(error => console.error('Check server error:', error.message));
+}
+
 // Fetch data from database
 const databaseRoot = "https://raw.githubusercontent.com/gchenfc/sci-hub-now/master/data/";
 // const databaseRoot = "data/"; // For local testing
@@ -240,6 +293,10 @@ function fillUrls() {
         setTimeout(checkServerStatus, 250, links[i], function (success) {
           update_counts(parseInt(i), success)
         })
+        // checkServer(links[i], 1000).then(success => {
+        //   linkstable.rows[parseInt(i) + 1].bgColor = "lightgreen";
+        // }).catch(error => {
+        //   linkstable.rows[parseInt(i) + 1].bgColor = "pink";});
       }
     }
   };
