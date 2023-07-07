@@ -18,17 +18,9 @@ async function doAlert(message) {
     args: [message],
   }).catch(reason => {
     console.log("Failed to trigger alert, trying to open popup: ", reason);
-    // browser.tabs.update({ url: 'chrome://extensions/?options=' + chrome.runtime.id }).then(tab => {
-    //   return chrome.scripting.executeScript({
-    //     target: { tabId: tab.id },
-    //     func: () => {
-    //       document.querySelector(".modal").style.display = 'block';
-    //       document.querySelector(".modal-body").innerHTML = text;
-    //     }
-    //   });
-    // });
-    // browser.tabs.create({ url: 'chrome://extensions/?options=' + chrome.runtime.id }).then();
-    // chrome.tabs.create({ url: "helper_js/notif-popup.html" });
+    browser.storage.local.set({ 'error-message': message });
+    // open options page
+    browser.tabs.update({ url: 'chrome://extensions/?options=' + chrome.runtime.id });
   });
 };
 

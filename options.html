@@ -35,6 +35,29 @@
       .separator:not(:empty)::after {
         margin-left: .25em;
       }
+
+      /* The Modal (background) */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgb(0, 0, 0);
+        background-color: rgba(0, 0, 0, 0.4);
+      }
+
+      /* Modal Content/Box */
+      .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+      }
     </style>
   </head>
   <body>
@@ -104,6 +127,25 @@
         Please visit the <a href="https://github.com/gchenfc/sci-hub-now/issues">github</a> to give feedback.
       </p>
     </div>
+
+    <!-- We use modal as an alternative to `alert` -->
+    <div class="modal" tabindex="-1" role="dialog">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title">Alert</h2>
+          </div>
+          <div class="modal-body" id="error-message" style="margin: 20px 0;">
+            <p>Modal body text goes here.</p>
+          </div>
+          <div class="modal-footer">
+            <!-- <button type="button" onclick="document.querySelector('.modal').style.display='none';"> -->
+            <button id="close-modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </body>
   <script type="module" src="options.js"></script>
 </html>

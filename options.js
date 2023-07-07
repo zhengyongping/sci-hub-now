@@ -63,6 +63,20 @@ function initializeBool(propname, alternateCallback) {
   };
 }
 
+// Alert modal
+async function doAlert() {
+  const data = await browser.storage.local.get('error-message')
+  if (!data['error-message']) return;
+  browser.storage.local.remove('error-message'); // clear the error message so it doesn't show up again
+  console.log('error message is: ', data['error-message']);
+  document.querySelector('#error-message').textContent = data['error-message'];
+  document.querySelector(".modal").style.display = 'block';
+}
+doAlert();
+document.getElementById("close-modal").addEventListener("click", function () {
+  document.querySelector(".modal").style.display = 'none';
+});
+
 // Callbacks
 function autodownloadCallback(checked) {
   console.log("autodownload callback: " + checked);
